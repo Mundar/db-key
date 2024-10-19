@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "db-key-macro",
+    "db-key-samples",
+]
+resolver = "2"
