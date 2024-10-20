@@ -98,6 +98,22 @@ pub struct Key {
     end: [u8; 3],
 }
 
+/// This tests how large keys are handled.
+#[db_key(path = attrib)]
+pub struct BigKey {
+    big0: u128,
+    big1: u128,
+    big2: u128,
+    big3: u128,
+    big4: u128,
+    big5: u128,
+    big6: u128,
+    big7: u128,
+    big8: u128,
+    big9: u128,
+    array: [u8; 160],
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -147,7 +147,7 @@ assert_eq!(new_key, from_array_key);
 
 # DB Key Options
 
-## Change crate name in documentation (crate_name)
+## Change crate name in documentation (`crate_name`)
 
 The `DBKey` derive macro generates testable code examples as documentation for
 much of the generated code. It adds a 'use' line and uses the crate name of the
@@ -173,7 +173,7 @@ The above code would generate the following `use` line in the documentation test
 use other_crate_name::{Test, TestKey};
 ```
 
-## Change path in documentation (path)
+## Change path in documentation (`path`)
 
 There is currently no way (in stable) to get the source file information. If the `DBKey`
 macro is used in any other file than `src/lib.rs`, than you will need to either make the two
@@ -227,7 +227,7 @@ let from_args = Key::from( Args {
 assert_eq!(from_new, from_args);
 ```
 
-## Don't auto-generate new() (no_new)
+## Don't auto-generate new() (`no_new`)
 
 Normally, the `DBKey` derive macro generates a `new()` implementation that
 includes all of the fields from the specification in order. If you don't want
@@ -268,7 +268,78 @@ assert_eq!(key.month(), 5);
 assert_eq!(key.day(), 10);
 ```
 
-## Manually write Debug implementation (custom_debug)
+## Force the structs to implement/not implement `Copy` (`copy`, `no_copy`)
+
+The default behavior is to implement the `Copy` trait for the key struture if
+the key length is 64 bytes or less. You can force keys to not implement the
+`Copy` with the `no_copy` option, and you can force the `Copy` trait to be
+implemented with the `copy` option.
+
+### Examples
+
+Large key won't implement `Copy`.
+
+```compile_fail
+use db_key_macro::DBKey;
+
+#[derive(DBKey)]
+struct Big {
+    array: [u8; 65],
+}
+
+let key = BigKey::default();
+let key_copy = key;
+assert_eq!(key, key_copy);
+```
+
+Add `copy` option to implement `Copy` for key.
+
+```rust
+use db_key_macro::DBKey;
+
+#[derive(DBKey)]
+#[key(copy)]
+struct Copy {
+    array: [u8; 65],
+}
+
+let key = CopyKey::default();
+let key_copy = key;
+assert_eq!(key, key_copy);
+```
+
+Keys 64 bytes or smaller implement `Copy`.
+
+```rust
+use db_key_macro::DBKey;
+
+#[derive(DBKey)]
+struct SmallEnough {
+    array: [u8; 64],
+}
+
+let key = SmallEnoughKey::default();
+let key_copy = key;
+assert_eq!(key, key_copy);
+```
+
+Add the `no_copy` option to not implement `Copy`.
+
+```compile_fail
+use db_key_macro::DBKey;
+
+#[derive(DBKey)]
+#[key(no_copy)]
+struct NoCopy {
+    array: [u8; 64],
+}
+
+let key = NoCopyKey::default();
+let key_copy = key;
+assert_eq!(key, key_copy);
+```
+
+## Manually write Debug implementation (`custom_debug`)
 
 Normally, the `DBKey` derive macro generates a `Debug` implementation that
 includes all of the fields from the specification in the output. If you want to
@@ -546,7 +617,7 @@ assert_eq!(&format!("{:?}", AKey::default()),
 
 # Field Attributes
 
-## Field name (name)
+## Field name (`name`)
 
 This allows you to define the name that will be used in the documentation. If it is not
 defined, then it will default to the field name.
@@ -568,7 +639,7 @@ struct Date {
 }
 ```
 
-## Default value (default)
+## Default value (`default`)
 
 The default field attruibute allows you to change the value that is used for the default.
 

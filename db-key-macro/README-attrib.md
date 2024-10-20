@@ -146,7 +146,7 @@ assert_eq!(new_key, from_array_key);
 
 # DB Key Options
 
-## Change crate name in documentation (crate_name)
+## Change crate name in documentation (`crate_name`)
 
 The `db_key` macro generates testable code examples as documentation for much of the
 generated code. It adds a 'use' line and uses the crate name of the crate in which it is used
@@ -171,7 +171,7 @@ The above code would generate the following `use` line in the documentation test
 use other_crate_name::{TestKey, TestKeyArgs};
 ```
 
-## Change path in documentation (path)
+## Change path in documentation (`path`)
 
 There is currently no way (in stable) to get the source file information. If the `db_key`
 macro is used in any other file than `src/lib.rs`, than you will need to either make the two
@@ -262,7 +262,76 @@ assert_eq!(key.month(), 5);
 assert_eq!(key.day(), 10);
 ```
 
-## Manually write Debug implementation (custom_debug)
+## Force the structs to implement/not implement `Copy` (`copy`, `no_copy`)
+
+The default behavior is to implement the `Copy` trait for both the key and
+argument strutures if the key length is 64 bytes or less. You can force keys to
+not implement the `Copy` with the `no_copy` option, and you can force the
+`Copy` trait to be implemented with the `copy` option.
+
+### Examples
+
+Large key won't implement `Copy`.
+
+```compile_fail
+use db_key_macro::db_key;
+
+#[db_key]
+struct BigKey {
+    array: [u8; 65],
+}
+
+let key = BigKey::default();
+let key_copy = key;
+assert_eq!(key, key_copy);
+```
+
+Add `copy` option to implement `Copy` for key.
+
+```rust
+use db_key_macro::db_key;
+
+#[db_key(copy)]
+struct CopyKey {
+    array: [u8; 65],
+}
+
+let key = CopyKey::default();
+let key_copy = key;
+assert_eq!(key, key_copy);
+```
+
+Keys 64 bytes or smaller implement `Copy`.
+
+```rust
+use db_key_macro::db_key;
+
+#[db_key]
+struct SmallEnoughKey {
+    array: [u8; 64],
+}
+
+let key = SmallEnoughKey::default();
+let key_copy = key;
+assert_eq!(key, key_copy);
+```
+
+Add the `no_copy` option to not implement `Copy`.
+
+```compile_fail
+use db_key_macro::db_key;
+
+#[db_key(no_copy)]
+struct NoCopyKey {
+    array: [u8; 64],
+}
+
+let key = NoCopyKey::default();
+let key_copy = key;
+assert_eq!(key, key_copy);
+```
+
+## Manually write Debug implementation (`custom_debug`)
 
 Normally, the `db_key` macro generates a `Debug` implementation that includes all of the
 fields from the specification in the output. If you want to write a custom Debug
@@ -528,7 +597,7 @@ assert_eq!(&format!("{:?}", Key::default()),
 
 # Field Attributes
 
-## Field name (name)
+## Field name (`name`)
 
 This allows you to define the name that will be used in the documentation. If it is not
 defined, then it will default to the field name.
@@ -550,7 +619,7 @@ struct DateKey {
 }
 ```
 
-## Default value (default)
+## Default value (`default`)
 
 The default field attruibute allows you to change the value that is used for the default.
 

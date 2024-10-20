@@ -125,6 +125,15 @@ impl DBKeyFields {
         (from_init_doc, verify_from_parts, from_init_doc, verify_parts, from_key, ""),
         (from_init_partial, verify_from_partial, from_init_partial, verify_partial, partial_from_key, ""),
     }
+
+    /// Return the total size of the key in bytes.
+    pub fn total_size(&self) -> usize {
+        let mut total = 0;
+        for field in self.fields.iter() {
+            total += field.field_type.size();
+        }
+        total
+    }
 }
 
 impl TryFrom<&DeriveInput> for DBKeyFields {

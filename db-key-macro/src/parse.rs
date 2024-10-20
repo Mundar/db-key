@@ -125,6 +125,7 @@ pub struct DBKeyAttributes {
     debug: bool,
     raw_fmt: RawDebugFormat,
     alt_name: Option<Ident>,
+    derive_copy: Option<bool>,
 }
 
 impl TryFrom<TokenStream> for DBKeyAttributes {
@@ -134,6 +135,7 @@ impl TryFrom<TokenStream> for DBKeyAttributes {
         let mut crate_name: Option<String> = None;
         let mut use_path: Option<String> = None;
         let mut alt_name: Option<Ident> = None;
+        let mut derive_copy = None;
         let mut new = true;
         let mut debug = true;
         let mut raw_fmt = RawDebugFormat::default();
@@ -149,6 +151,10 @@ impl TryFrom<TokenStream> for DBKeyAttributes {
                                 "alt_name" => {
                                     waiting_for = ParseAttrExpect::Equals(ParseAttrParam::AltName);
                                 }
+                                "copy" => {
+                                    derive_copy = Some(true);
+                                    waiting_for = ParseAttrExpect::Comma;
+                                }
                                 "crate_name" => {
                                     waiting_for = ParseAttrExpect::Equals(ParseAttrParam::Crate);
                                 }
@@ -158,6 +164,10 @@ impl TryFrom<TokenStream> for DBKeyAttributes {
                                 }
                                 "raw_debug" => {
                                     waiting_for = ParseAttrExpect::Equals(ParseAttrParam::RawDebug);
+                                }
+                                "no_copy" => {
+                                    derive_copy = Some(false);
+                                    waiting_for = ParseAttrExpect::Comma;
                                 }
                                 "no_new" => {
                                     new = false;
@@ -262,6 +272,7 @@ impl TryFrom<TokenStream> for DBKeyAttributes {
             debug,
             raw_fmt,
             alt_name,
+            derive_copy,
         })
     }
 }
@@ -440,6 +451,7 @@ impl DBKeyStruct {
         let raw_debug_impl = self.raw_debug_impl();
         let args_doc_header = format!("Argument structure used to create [{}] structures.", ident);
         let from_doc_header = format!("Create a `{}` from a [{}].", ident, args_ident);
+        let derive_copy = self.derive_copy();
         let mut optional_new_docs = Vec::new();
         let mut optional_new_partial_docs = Vec::new();
         let mut optional_functions = Vec::new();
@@ -558,7 +570,8 @@ impl DBKeyStruct {
                 #[doc = #verify_from_partial]
                 #(#optional_new_partial_docs)*
                 /// ```
-                #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+                #derive_copy
+                #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
                 #vis struct #args_ident {
                     #(pub #params)*
                 }
@@ -591,7 +604,8 @@ impl DBKeyStruct {
             ///
             #(#optional_new_docs)*
             /// ```
-            #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
+            #derive_copy
+            #[derive(Clone, Hash, PartialEq, Eq, PartialOrd, Ord)]
             #vis struct #ident([u8; #ident::KEY_LENGTH]);
 
             impl Default for #ident {
@@ -635,6 +649,15 @@ impl DBKeyStruct {
             #from_docs
             impl From<#args_ident> for #ident {
                 fn from(args: #args_ident) -> Self {
+                    let mut buf = [0_u8; #ident::KEY_LENGTH];
+                    #(#from_args)*
+                    Self(buf)
+                }
+            }
+
+            #from_docs
+            impl From<&#args_ident> for #ident {
+                fn from(args: &#args_ident) -> Self {
                     let mut buf = [0_u8; #ident::KEY_LENGTH];
                     #(#from_args)*
                     Self(buf)
@@ -752,6 +775,20 @@ impl DBKeyStruct {
         self.fields.verify_from_partial(
             format_args!("// Verify the contents of partial_from_key."),
             "")
+    }
+
+    fn derive_copy(&self) -> TokenStream {
+        let derive_copy = self.attr.derive_copy.unwrap_or_else(|| {
+            let total_size = self.fields.total_size();
+            if 64 < total_size { false }
+            else { true }
+        });
+        if derive_copy {
+            quote! {
+                #[derive(Copy)]
+            }
+        }
+        else { quote!{} }
     }
 
     fn raw_debug_format(&self) -> TokenStream {

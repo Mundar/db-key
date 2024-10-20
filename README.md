@@ -30,7 +30,10 @@ call.
 ```rust
 # use db_key_macro::db_key;
 #[db_key(no_new, custom_debug, alt_name = Args)]
-# struct Key { id: u64, index: u32 }
+struct Key {
+    id: u64,
+    index: u32,
+}
 ```
 
 The key options for the derive macro are defined in a separate `key` attribute
@@ -38,10 +41,20 @@ macro.
 
 ```rust
 # use db_key_macro::DBKey;
-#[derive(DBKey)]
+#[derive(Clone, DBKey, PartialEq, Eq, PartialOrd, Ord)]
 #[key(no_new, custom_debug, alt_name = Key)]
-# struct Args { pub id: u64, pub index: u32 }
+struct Args {
+    pub id: u64,
+    pub index: u32,
+}
 ```
+
+The key struture always derives `Clone`, `Hash`, `PartialEq`, `Eq`,
+`PartialOrd`, and `Ord`. If the size of the key is 64-bytes or less, than it
+also derives `Copy` as well. A custom `Debug` implementation is supplied for
+the key structure. For the attribute macro, the argument structure has all the
+same derived implementations except `Hash` and it uses the standard derived
+`Debug`.
 
 Since the attribute macro replaces the definition structure, it is more
 permissive about the data that is allowed in the definition strucure.
@@ -74,7 +87,7 @@ it is more restrictive about what is expected.
 
 ```rust
 # use db_key_macro::DBKey;
-#[derive(DBKey)]
+#[derive(Copy, Clone, DBKey, PartialEq, Eq, PartialOrd, Ord)]
 #[key(no_new, custom_debug, alt_name = Key)]
 struct Args {
     /// The ID number.

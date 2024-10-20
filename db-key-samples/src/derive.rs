@@ -62,6 +62,23 @@ pub struct Key {
     pub end: [u8; 3],
 }
 
+/// This tests how large keys are handled.
+#[derive(DBKey)]
+#[key(path = derive)]
+pub struct Big {
+    pub big0: u128,
+    pub big1: u128,
+    pub big2: u128,
+    pub big3: u128,
+    pub big4: u128,
+    pub big5: u128,
+    pub big6: u128,
+    pub big7: u128,
+    pub big8: u128,
+    pub big9: u128,
+    pub array: [u8; 160],
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
