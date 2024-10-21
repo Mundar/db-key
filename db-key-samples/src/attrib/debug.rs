@@ -1,3 +1,5 @@
+//! Sample keys testing the different raw key debug formats.
+
 use db_key_macro::db_key;
 
 #[db_key(path="attrib::debug", raw_debug = std)]

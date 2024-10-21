@@ -1,3 +1,5 @@
+//! Sample keys testing the different raw key debug formats.
+
 use db_key_macro::DBKey;
 
 #[derive(DBKey)]

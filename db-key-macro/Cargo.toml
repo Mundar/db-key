@@ -21,5 +21,12 @@ rand = "0.8.5"
 syn = { version = "2.0.77", features = ["full", "extra-traits"] }
 
 [dev-dependencies]
+bincode = "1.3.3"
 criterion = "0.5.1"
 proptest = "1.5.0"
+serde = { version = "1.0.210", features = ["derive"] }
+smallvec = { version = "1.13.2", features = ["write"] }
+
+[[bench]]
+name = "benchmarks"
+harness = false
