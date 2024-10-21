@@ -1,17 +1,70 @@
 # DBKey Macros
 
+The db-key macros generate a structure to be used as the fixed-size key for a
+key-value database. Both macros take a prototype (or definition) structure and
+create a tuple struture wrapped around an array.
+
+```rust
+use db_key_macro::db_key;
+
+#[db_key]
+struct ExampleKey {
+    byte: u8,
+    long: u32,
+    array: [u8; 3],
+}
+
+let key = ExampleKey::new(0x12, 0x3456789A, [0xBC, 0xDE, 0xF0]);
+
+assert_eq!(key.long(), 0x3456789A);
+assert_eq!(key.array(), &[0xBC, 0xDE, 0xF0]);
+assert_eq!(key.as_ref(), &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0]);
+```
+
+Currently, the data types that can be used in the definition structure are
+limited to unsigned integers (except `usize`), and arrays of u8. The key data
+is always packed and lexographically ordered so that the definition structure
+and the key structure will have the same order when sorted.
+
 There are two `DBKey` macros supplied by this crate: an attribute macro
 (`#[db_key]`) and a derive macro (`DBKey`). They each provide similar
 functionality of creating a fixed-length key type for key-value databases that
-use a slice of bytes as the key.
+use a slice of bytes as the key. The generated code is documented with
+examples.
 
-Both macro types work on a struct (the definition structure) that contains
-unsigned integers and/or arrays of unsigned bytes. The key that is generated is
-a tuple structure with a fixed-length array determined by the contents of the
-structure. The attribute macro also generates an argument structure that can be
-used to define a key structure from the parts of the key. The attribute macro
-replaces the definition structure, whereas with the derive macro, the
-definition structure becomes the argument structure.
+For clarification the definition structure is the struture used to define the
+key, the key struture is the tuple structure wrapping an array, and the
+argument struture provides an easy way to define a key from the individual
+components.
+
+```rust
+# use db_key_macro::db_key;
+// Definition struture:
+#[db_key]
+struct ExampleKey {
+    byte: u8,
+    long: u32,
+    array: [u8; 3],
+}
+```
+
+```rust
+// The generated key struture:
+struct ExampleKey([u8; 8]);
+```
+
+```rust
+// The (generated) argument struture:
+struct ExampleKeyArgs {
+    pub byte: u8,
+    pub long: u32,
+    pub array: [u8; 3],
+}
+```
+
+The attribute macro consumes the definition structure and generates both a key
+struture and an argument structure. The derive macro only generates a key
+struture and the definition struture can be used an the argument struture.
 
 With the attribute macro, the name of the definition structure is used for the
 key structure and the argument structure uses the definition structure name
