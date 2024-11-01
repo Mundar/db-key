@@ -470,7 +470,7 @@ impl DBKeyField {
             FieldSize::Unsigned8 => {
                 let start_ident = &self.start_ident;
                 quote! {
-                    pub fn #ident(&self) -> u8 {
+                    pub const fn #ident(&self) -> u8 {
                         self.0[Self::#start_ident]
                     }
                 }

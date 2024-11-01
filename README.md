@@ -1,6 +1,6 @@
 # DBKey Macros
 
-The db-key macros generate a structure to be used as the fixed-size key for a
+The db-key macros generate a structure that can used as a fixed-size key for a
 key-value database. Both macros take a prototype (or definition) structure and
 create a tuple struture wrapped around an array.
 
@@ -159,3 +159,102 @@ struct Args {
     array: [u8; 3],
 }
 ```
+
+# Adding Functions
+
+There are non-public constants and functions that can be used when implementing
+additional methods for the key structure.
+
+For every field in the structure, there are 4 constants defined. There is a
+size `usize` constant with the size of the field in bytes. There is a start index
+and end index `usize` constants set to the index of the first byte of the field
+in the key and the byte after the last byte in the key. And there is a range
+constant with the range of bytes used by the field of the key. The range
+constant has a `Range<usize>` type.
+
+For an example field `example: u32`, the size constant is `EXAMPLE_SIZE`, the
+start index constant is `EXAMPLE_START`, the end index constant is
+`EXAMPLE_END` and the range constant is `EXAMPLE_RANGE`.
+
+## Example
+
+```rust
+use db_key_macro::db_key;
+use std::ops::Range;
+
+/// A key for storing food records for tracking what you eat in a day.
+#[db_key]
+pub struct FoodEntryKey {
+    /// The year that the food was consumed.
+    year: u16,
+    /// The month that the food was consumed.
+    month: u8,
+    /// The day that the food was consumed.
+    day: u8,
+    /// The index of the food that was consumed. We are assuming that someone
+    /// won't eat more than 255 things in a day.
+    index: u8,
+}
+
+/// This is a date structure used to combine the year, month, and day.
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Date {
+    year: u16,
+    month: u8,
+    day: u8,
+}
+
+impl FoodEntryKey {
+    /// Create a new `FoodEntryKey` key using the index and a 32-bit date value
+    /// with the year, month, and day stored in a single structure.
+    pub fn new_from_date(date: Date, index: u8) -> Self {
+        let mut key = [0_u8; Self::KEY_LENGTH];
+        key[Self::YEAR_RANGE].copy_from_slice(&date.year.to_be_bytes());
+        key[Self::MONTH_START] = date.month;
+        key[Self::DAY_START] = date.day;
+        key[Self::INDEX_START] = index;
+        Self(key)
+    }
+
+    /// Get the date value from the key.
+    pub fn date(&self) -> Date {
+        Date {
+            year: self.year(),
+            month: self.month(),
+            day: self.day(),
+        }
+    }
+
+    /// Set the date value in a key.
+    pub fn set_date(&mut self, date: Date) {
+        self.set_year(date.year);
+        self.set_month(date.month);
+        self.set_day(date.day);
+    }
+}
+
+let date = Date { year: 2024, month: 10, day: 31 };
+let key = FoodEntryKey::new_from_date(date, 0);
+assert_eq!(key.year(), 2024);
+assert_eq!(key.month(), 10);
+assert_eq!(key.day(), 31);
+assert_eq!(key.index(), 0);
+assert_eq!(key.date(), Date{ year: 2024, month: 10, day: 31 });
+assert_eq!(key.as_ref(), &[(2024/256) as u8, (2024%256) as u8, 10, 31, 0]);
+```
+
+# Future Plans
+
+I keep on thinking of things I want to add to this, but I want to get it out in
+the world sometime. Here are a list of features I am thinking of adding in the
+future.
+
+* Support signed integers in definition structure.
+* Add option to allow string input/output for arrays (and even integer types).
+* Add option to hide fields from interface (either so the developer can write
+  thier own, or because they want them to always be the default value/padding)
+* Support floating point values in the definition structure. This will
+  partially break the parity between args atructure and key structure.
+* Add option to store keys in little endian order. Breaks ordering.
+* Add default documentation to the key structure if one isn't supplied.
+* Make as many generated functions const as possible.

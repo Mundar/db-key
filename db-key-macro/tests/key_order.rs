@@ -10,7 +10,7 @@ struct AttributeKey {
     five: [u8; 3],
 }
 
-#[derive(DBKey, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
 struct Derive {
     one: u64,
     two: u32,

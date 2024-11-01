@@ -42,7 +42,7 @@ pub struct NoNew {
 }
 
 /// This is a sample key with an alternate name.
-#[derive(DBKey)]
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[key(alt_name = Args, path = derive)]
 pub struct Key {
     /// This is the ID number for the something.
@@ -63,7 +63,7 @@ pub struct Key {
 }
 
 /// This tests how large keys are handled.
-#[derive(DBKey)]
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[key(path = derive)]
 pub struct Big {
     pub big0: u128,
@@ -77,6 +77,20 @@ pub struct Big {
     pub big8: u128,
     pub big9: u128,
     pub array: [u8; 160],
+}
+
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[key(path = derive)]
+pub struct NoDoc {
+    pub id: u64,
+    #[default = "12345_u16"]
+    pub word: u16,
+    #[default = 105]
+    pub byte: u8,
+    #[default = "0x12345678_u32"]
+    pub long: u32,
+    #[default = "[0xAB; 3]"]
+    pub end: [u8; 3],
 }
 
 #[cfg(test)]

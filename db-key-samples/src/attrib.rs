@@ -114,6 +114,19 @@ pub struct BigKey {
     array: [u8; 160],
 }
 
+#[db_key(path = attrib)]
+pub struct NoDocKey {
+    id: u64,
+    #[default = 12345_u16]
+    word: u16,
+    #[default = 105]
+    byte: u8,
+    #[default = 0x12345678_u32]
+    long: u32,
+    #[default = [0xAB; 3]]
+    end: [u8; 3],
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
