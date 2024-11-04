@@ -256,5 +256,4 @@ future.
 * Support floating point values in the definition structure. This will
   partially break the parity between args atructure and key structure.
 * Add option to store keys in little endian order. Breaks ordering.
-* Add default documentation to the key structure if one isn't supplied.
 * Make as many generated functions const as possible.

@@ -143,6 +143,7 @@ impl Display for FieldValue {
 
 /// A reference to a `FieldValue` with a `Display` implementation for comparing in an assert_eq
 /// macro.
+#[derive(Copy, Clone, Debug)]
 pub struct FieldValueAssertEq<'v>(&'v FieldValue);
 
 impl<'v> Display for FieldValueAssertEq<'v> {
@@ -159,6 +160,7 @@ impl<'v> Display for FieldValueAssertEq<'v> {
 
 /// A reference to a `FieldValue` with a `Display` implementation for outputing just a comma
 /// separated list of bytes.
+#[derive(Copy, Clone, Debug)]
 pub struct FieldValueJustBytes<'v>(&'v FieldValue);
 
 impl<'v> Display for FieldValueJustBytes<'v> {

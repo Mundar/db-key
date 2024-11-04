@@ -13,9 +13,12 @@ use syn::{
     spanned::Spanned,
     Visibility,
 };
-use crate::field::{
-    DBKeyFields,
-    value::FieldValue,
+use crate::{
+    add_doc,
+    field::{
+        DBKeyFields,
+        value::FieldValue,
+    }
 };
 
 #[derive(Debug)]
@@ -339,8 +342,12 @@ impl DBKeyStruct {
             None => Ident::new(&format!("{}Args", ident), ident.span()),
             Some(alt_name) => alt_name.clone(),
         };
-        let struct_attrs = input.attrs.clone();
         let fields = DBKeyFields::try_from(&input)?;
+        let mut struct_attrs = input.attrs.clone();
+        if struct_attrs.is_empty() {
+            let doc = format!("The {} structure", ident);
+            add_doc(&mut struct_attrs, &doc);
+        }
         Ok(Self {
             attr,
             vis,
@@ -370,6 +377,10 @@ impl DBKeyStruct {
             Some(alt_name) => alt_name.clone(),
         };
         let fields = DBKeyFields::try_from(&input)?;
+        if struct_attrs.is_empty() {
+            let doc = format!("The {} structure", ident);
+            add_doc(&mut struct_attrs, &doc);
+        }
         Ok(Self {
             attr,
             vis,
@@ -428,6 +439,7 @@ impl DBKeyStruct {
         let example_start = self.example_start();
         let consts = self.fields.consts();
         let sizes = self.fields.sizes();
+        let struct_fields = self.fields.struct_fields();
         let params = self.fields.params();
         let gets = self.gets();
         let sets = self.sets();
@@ -573,7 +585,7 @@ impl DBKeyStruct {
                 #derive_copy
                 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
                 #vis struct #args_ident {
-                    #(pub #params)*
+                    #(#struct_fields)*
                 }
             }
         }

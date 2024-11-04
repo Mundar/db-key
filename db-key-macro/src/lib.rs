@@ -1,9 +1,15 @@
 #![doc = include_str!("../README.md")]
+#![forbid(future_incompatible)]
+#![warn(missing_docs, missing_debug_implementations, bare_trait_objects)]
+
 use proc_macro::TokenStream;
 use syn::{
     self,
     parse_macro_input,
+    Attribute,
     DeriveInput,
+    ItemMod,
+    parse_quote,
 };
 
 mod parse;
@@ -27,4 +33,18 @@ pub fn db_key_derive(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let db_key = DBKey::derive(input);
     db_key.generate().into()
+}
+
+/// Add a documenation line to a vector of `Attribute`.
+pub(crate) fn add_doc(docs: &mut Vec<Attribute>, doc: &str) {
+    // There is probably a better way to do this, but this was the easiest way I found to do so.
+    let item_mod: ItemMod = parse_quote! {
+        #[doc = #doc]
+        mod doc;
+    };
+    for attr in item_mod.attrs.iter() {
+        if attr.path().is_ident("doc") {
+            docs.push(attr.clone());
+        }
+    }
 }

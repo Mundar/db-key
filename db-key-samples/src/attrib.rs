@@ -1,3 +1,5 @@
+#![warn(missing_docs, missing_debug_implementations, bare_trait_objects)]
+
 pub mod debug;
 
 use db_key_macro::db_key;
@@ -10,13 +12,17 @@ pub struct SampleKey {
     #[name = "ID"]
     #[default = 0x123456789ABCDEF0]
     id: u64,
+    /// A u16 value.
     #[name = "Word"]
     word: u16,
+    /// A u8 value.
     #[name = "Byte"]
     byte: u8,
+    /// A u32 value.
     #[name = "Longword"]
     #[default = 0x12345678_u32]
     long: u32,
+    /// A 3-byte array value.
     #[name = "End array"]
     #[default = [0xA5_u8; 3]]
     end: [u8; 3],
@@ -28,12 +34,16 @@ pub struct NoNewKey {
     /// This is the ID number for the something.
     #[name = "ID"]
     id: u64,
+    /// A u16 value.
     #[name = "Word"]
     word: u16,
+    /// A u8 value.
     #[name = "Byte"]
     byte: u8,
+    /// A u32 value.
     #[name = "Longword"]
     long: u32,
+    /// A 3-byte array value.
     #[name = "End array"]
     #[default = [0x12_u8, 0x34, 0x56]]
     end: [u8; 3],
@@ -48,11 +58,14 @@ struct PrivateKey {
     id: u64,
     #[name = "Word"]
     word: u16,
+    /// A u8 value.
     #[name = "Byte"]
     byte: u8,
+    /// A u32 value.
     #[name = "Longword"]
     #[default = 0x12345678_u32]
     long: u32,
+    /// A 3-byte array value.
     #[name = "End array"]
     #[default = [0xA5_u8; 3]]
     end: [u8; 3],
@@ -67,12 +80,15 @@ pub(crate) struct PublicCrateKey {
     #[name = "Word"]
     #[default = 12345_u16]
     word: u16,
+    /// A u8 value.
     #[name = "Byte"]
     #[default = 105]
     byte: u8,
+    /// A u32 value.
     #[name = "Longword"]
     #[default = 0x12345678_u32]
     long: u32,
+    /// A 3-byte array value.
     #[name = "End array"]
     #[default = [0xAB; 3]]
     end: [u8; 3],
@@ -84,15 +100,19 @@ pub struct Key {
     /// This is the ID number for the something.
     #[name = "ID"]
     id: u64,
+    /// A u16 value.
     #[name = "Word"]
     #[default = 12453_u16]
     word: u16,
+    /// A u8 value.
     #[name = "Byte"]
     #[default = 150]
     byte: u8,
+    /// A u32 value.
     #[name = "Longword"]
     #[default = 0x18245637_u32]
     long: u32,
+    /// A 3-byte array value.
     #[name = "End array"]
     #[default = [0xBA; 3]]
     end: [u8; 3],
@@ -101,29 +121,46 @@ pub struct Key {
 /// This tests how large keys are handled.
 #[db_key(path = attrib)]
 pub struct BigKey {
+    /// Big field 0.
     big0: u128,
+    /// Big field 1.
     big1: u128,
+    /// Big field 2.
     big2: u128,
+    /// Big field 3.
     big3: u128,
+    /// Big field 4.
     big4: u128,
+    /// Big field 5.
     big5: u128,
+    /// Big field 6.
     big6: u128,
+    /// Big field 7.
     big7: u128,
+    /// Big field 8.
     big8: u128,
+    /// Big field 9.
     big9: u128,
+    /// Big array field.
     array: [u8; 160],
 }
 
 #[db_key(path = attrib)]
 pub struct NoDocKey {
+    /// A 64-bit identifier field.
     id: u64,
+    /// A u16 value.
     #[default = 12345_u16]
+    /// A u16 value.
     word: u16,
     #[default = 105]
+    /// A u8 value.
     byte: u8,
     #[default = 0x12345678_u32]
+    /// A u32 value.
     long: u32,
     #[default = [0xAB; 3]]
+    /// A 3-byte array value.
     end: [u8; 3],
 }
 

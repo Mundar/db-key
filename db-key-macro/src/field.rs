@@ -109,6 +109,7 @@ impl DBKeyFields {
         (consts, "constants"),
         (sizes, "sizes"),
         (params, "new parameters"),
+        (struct_fields, "new structure fields"),
         (defines, "code to initialize new()"),
         (from_args, "code to initialize from(KeyArgs)"),
         (debug, "code to impelment Debug"),
@@ -174,7 +175,6 @@ impl TryFrom<&DeriveInput> for DBKeyFields {
         }
     }
 }
-
 
 #[derive(Debug)]
 struct FieldAttributes {
@@ -375,6 +375,17 @@ impl DBKeyField {
         let field_type = &self.field_type;
         quote!{
             #ident: #field_type,
+        }
+    }
+
+    /// Define the new structure field for this field.
+    pub fn struct_fields(&self) -> TokenStream {
+        let ident = &self.ident;
+        let docs = &self.attr.docs;
+        let field_type = &self.field_type;
+        quote!{
+            #(#docs)*
+            pub #ident: #field_type,
         }
     }
 
