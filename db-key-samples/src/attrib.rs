@@ -164,6 +164,137 @@ pub struct NoDocKey {
     end: [u8; 3],
 }
 
+/// This is a sample key with minimums and maximums.
+#[db_key(path = attrib)]
+pub struct MinMaxKey {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    #[min=1]
+    #[max=0x8000000000000000_u64]
+    id: u64,
+    /// A u16 value.
+    #[name = "Word"]
+    #[min = 150_u16]
+    #[default = 12453_u16]
+    #[max = 60000]
+    word: u16,
+    /// A u8 value.
+    #[name = "Byte"]
+    #[default = u8::MAX]
+    #[min = u8::MAX]
+    #[max = u8::MAX]
+    byte: u8,
+    /// A u32 value.
+    #[name = "Longword"]
+    #[min = 0x11111111]
+    #[default = 0x18245637_u32]
+    #[min = 0x99999999_u32]
+    long: u32,
+    /// A 3-byte array value.
+    #[name = "End array"]
+    #[default = [0xBA; 3]]
+    #[max = [0xEF; 3]]
+    #[min = [0x20; 3]]
+    end: [u8; 3],
+}
+
+/// This is a sample key with signed integer values.
+#[db_key(path = attrib)]
+pub struct SignedKey {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    #[min=-1234567890]
+    #[max=1234567890]
+    id: i64,
+    /// A i16 value.
+    #[name = "Word"]
+    #[min = 150_i16]
+    #[default = 12453_i16]
+    #[max = 30000]
+    word: i16,
+    /// A i8 value.
+    #[name = "Byte"]
+    #[default = i8::MAX]
+    #[min = i8::MAX]
+    #[max = i8::MAX]
+    byte: i8,
+    /// A i32 value.
+    #[name = "Longword"]
+    #[min = -0x77777777]
+    #[default = 0x18245637_i32]
+    #[min = 0x77777777_i32]
+    long: i32,
+    /// A 3-byte array value.
+    #[name = "End array"]
+    #[default = [0xBA; 3]]
+    #[max = [u8::MAX, 0xF0_u8, 0o360u8]]
+    #[min = [0x20; 3]]
+    end: [u8; 3],
+}
+
+/// This is a sample key to test the `no_min` and `no_max` options.
+#[db_key(no_min, no_max, path = attrib)]
+pub struct NoMinMaxKey {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    id: u64,
+    /// A u16 value.
+    #[name = "Word"]
+    word: u16,
+    /// A u8 value.
+    #[name = "Byte"]
+    byte: u8,
+    /// A u32 value.
+    #[name = "Longword"]
+    long: u32,
+    /// A 3-byte array value.
+    #[name = "End array"]
+    #[default = [0x12_u8, 0x34, i8::MAX as u8]]
+    end: [u8; 3],
+}
+
+/// This is a sample key to test the `no_min` option.
+#[db_key(no_min, path = attrib)]
+pub struct NoMinKey {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    id: u64,
+    /// A u16 value.
+    #[name = "Word"]
+    word: u16,
+    /// A u8 value.
+    #[name = "Byte"]
+    byte: u8,
+    /// A u32 value.
+    #[name = "Longword"]
+    long: u32,
+    /// A 3-byte array value.
+    #[name = "End array"]
+    #[default = [0x12_u8, 0x34, i8::MAX as u8]]
+    end: [u8; 3],
+}
+
+/// This is a sample key to test the `no_max` option.
+#[db_key(no_max, path = attrib)]
+pub struct NoMaxKey {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    id: u64,
+    /// A u16 value.
+    #[name = "Word"]
+    word: u16,
+    /// A u8 value.
+    #[name = "Byte"]
+    byte: u8,
+    /// A u32 value.
+    #[name = "Longword"]
+    long: u32,
+    /// A 3-byte array value.
+    #[name = "End array"]
+    #[default = [0x12_u8, 0x34, i8::MAX as u8]]
+    end: [u8; 3],
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -126,11 +126,15 @@ struct Key {
     #[name = "index value"]
     // This isn't allowed in the derive macro. It will trigger an error.
     #[default = 1_u32]
+    // This isn't allowed in the derive macro. It will trigger an error.
+    #[min = 1_u32]
     index: u32,
     /// The array value
     #[name = "array value"]
     // This isn't allowed in the derive macro. It will trigger an error.
     #[default = [1, 2, 3]]
+    // This isn't allowed in the derive macro. It will trigger an error.
+    #[max = [0x7F; 3]]
     array: [u8; 3],
 }
 ```
@@ -153,9 +157,13 @@ struct Args {
     #[name = "index value"]
     // You can get around the limitation for default values by using a &str.
     #[default = "1_u32"]
+    // You can get around the limitation for default values by using a &str.
+    #[min = "1_u32"]
     pub index: u32,
     // You can get around the limitation for default values by using a &str.
     #[default = "[1, 2, 3]"]
+    // You can get around the limitation for default values by using a &str.
+    #[max = "[0x7F; 3]"]
     array: [u8; 3],
 }
 ```
@@ -165,16 +173,19 @@ struct Args {
 There are non-public constants and functions that can be used when implementing
 additional methods for the key structure.
 
-For every field in the structure, there are 4 constants defined. There is a
+For every field in the structure, there are 7 constants defined. There is a
 size `usize` constant with the size of the field in bytes. There is a start index
-and end index `usize` constants set to the index of the first byte of the field
-in the key and the byte after the last byte in the key. And there is a range
+and an end index `usize` constants set to the index of the first byte of the
+field in the key and the byte after the last byte in the key. There is a range
 constant with the range of bytes used by the field of the key. The range
-constant has a `Range<usize>` type.
+constant has a `Range<usize>` type. There are default, minimum, and maximum
+constants with the same type as the field.
 
 For an example field `example: u32`, the size constant is `EXAMPLE_SIZE`, the
 start index constant is `EXAMPLE_START`, the end index constant is
-`EXAMPLE_END` and the range constant is `EXAMPLE_RANGE`.
+`EXAMPLE_END` and the range constant is `EXAMPLE_RANGE`. Additionally, the
+default value is in `EXAMPLE_DEFAULT`, the minimum value is in `EXAMPLE_MIN`
+and the maximum value is in `EXAMPLE_MAX`.
 
 ## Example
 
@@ -188,8 +199,14 @@ pub struct FoodEntryKey {
     /// The year that the food was consumed.
     year: u16,
     /// The month that the food was consumed.
+    #[min = 1]
+    #[default = 1]
+    #[max = 12]
     month: u8,
     /// The day that the food was consumed.
+    #[min = 1]
+    #[default = 1]
+    #[max = 31]
     day: u8,
     /// The index of the food that was consumed. We are assuming that someone
     /// won't eat more than 255 things in a day.
@@ -249,7 +266,6 @@ I keep on thinking of things I want to add to this, but I want to get it out in
 the world sometime. Here are a list of features I am thinking of adding in the
 future.
 
-* Support signed integers in definition structure.
 * Add option to allow string input/output for arrays (and even integer types).
 * Add option to hide fields from interface (either so the developer can write
   thier own, or because they want them to always be the default value/padding)
@@ -257,3 +273,4 @@ future.
   partially break the parity between args atructure and key structure.
 * Add option to store keys in little endian order. Breaks ordering.
 * Make as many generated functions const as possible.
+* Provide option to enforce the minimum and maximum values.

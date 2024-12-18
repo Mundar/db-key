@@ -93,6 +93,130 @@ pub struct NoDoc {
     pub end: [u8; 3],
 }
 
+/// This is a sample key with minimums and maximums.
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[key(path = derive)]
+pub struct MinMax {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    #[min=1]
+    #[max="0x8000000000000000_u64"]
+    pub id: u64,
+    /// A u16 value.
+    #[name = "Word"]
+    #[min = "150_u16"]
+    #[default = "12453_u16"]
+    #[max = 60000]
+    pub word: u16,
+    /// A u8 value.
+    #[name = "Byte"]
+    #[default = "u8::MAX"]
+    #[min = "u8::MAX"]
+    #[max = "u8::MAX"]
+    pub byte: u8,
+    /// A u32 value.
+    #[name = "Longword"]
+    #[min = 0x11111111]
+    #[default = "0x18245637_u32"]
+    #[min = "0x99999999_u32"]
+    pub long: u32,
+    /// A 3-byte array value.
+    #[name = "End array"]
+    #[default = "[0xBA; 3]"]
+    #[max = "[0xEF; 3]"]
+    #[min = "[0x20; 3]"]
+    pub end: [u8; 3],
+}
+
+/// This is a sample key with signed integer fields.
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[key(path = derive)]
+pub struct Signed {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    #[min="-0x8000000000000000_i64"]
+    #[max=0]
+    pub id: i64,
+    /// A i16 value.
+    #[name = "Word"]
+    #[min = "-30000_i16"]
+    #[default = "12453_i16"]
+    #[max = 30000]
+    pub word: i16,
+    /// A i8 value.
+    #[name = "Byte"]
+    #[default = "i8::MAX"]
+    #[min = "i8::MAX"]
+    #[max = "i8::MAX"]
+    pub byte: i8,
+    /// A i32 value.
+    #[name = "Longword"]
+    #[min = "-0x77777777"]
+    #[default = "0x18245637_i32"]
+    #[min = "0x77777777_i32"]
+    pub long: i32,
+    /// A 3-byte array value.
+    #[name = "End array"]
+    #[default = "[0xBA; 3]"]
+    #[max = "[u8::MAX, 0xF0_u8, 0o360u8]"]
+    #[min = "[0x20; 3]"]
+    pub end: [u8; 3],
+}
+
+/// This is a sample key the `no_min` and `no_max` options.
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[key(no_min, no_max, path = derive)]
+pub struct NoMinMax {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    pub id: u64,
+    #[name = "Word"]
+    pub word: u16,
+    #[name = "Byte"]
+    pub byte: u8,
+    #[name = "Longword"]
+    pub long: u32,
+    #[name = "End array"]
+    #[default = "[0x12_u8, 0x34, i8::MAX as u8]"]
+    pub end: [u8; 3],
+}
+
+/// This is a sample key the `no_min` option.
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[key(no_min, path = derive)]
+pub struct NoMin {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    pub id: u64,
+    #[name = "Word"]
+    pub word: u16,
+    #[name = "Byte"]
+    pub byte: u8,
+    #[name = "Longword"]
+    pub long: u32,
+    #[name = "End array"]
+    #[default = "[0x12_u8, 0x34, i8::MAX as u8]"]
+    pub end: [u8; 3],
+}
+
+/// This is a sample key the `no_max` option.
+#[derive(Copy, Clone, DBKey, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[key(no_max, path = derive)]
+pub struct NoMax {
+    /// This is the ID number for the something.
+    #[name = "ID"]
+    pub id: u64,
+    #[name = "Word"]
+    pub word: u16,
+    #[name = "Byte"]
+    pub byte: u8,
+    #[name = "Longword"]
+    pub long: u32,
+    #[name = "End array"]
+    #[default = "[0x12_u8, 0x34, i8::MAX as u8]"]
+    pub end: [u8; 3],
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

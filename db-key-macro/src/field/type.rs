@@ -18,6 +18,11 @@ use std::{
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum FieldSize {
+    Signed8,
+    Signed16,
+    Signed32,
+    Signed64,
+    Signed128,
     Unsigned8,
     Unsigned16,
     Unsigned32,
@@ -30,6 +35,11 @@ impl FieldSize {
     /// Return the size of the field type in bytes.
     pub fn size(&self) -> usize {
         match self {
+            FieldSize::Signed8 => 1,
+            FieldSize::Signed16 => 2,
+            FieldSize::Signed32 => 4,
+            FieldSize::Signed64 => 8,
+            FieldSize::Signed128 => 16,
             FieldSize::Unsigned8 => 1,
             FieldSize::Unsigned16 => 2,
             FieldSize::Unsigned32 => 4,
@@ -43,27 +53,17 @@ impl FieldSize {
 impl std::fmt::Display for FieldSize {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            FieldSize::Signed8 => f.write_str("1"),
+            FieldSize::Signed16 => f.write_str("2"),
+            FieldSize::Signed32 => f.write_str("4"),
+            FieldSize::Signed64 => f.write_str("8"),
+            FieldSize::Signed128 => f.write_str("16"),
             FieldSize::Unsigned8 => f.write_str("1"),
             FieldSize::Unsigned16 => f.write_str("2"),
             FieldSize::Unsigned32 => f.write_str("4"),
             FieldSize::Unsigned64 => f.write_str("8"),
             FieldSize::Unsigned128 => f.write_str("16"),
             FieldSize::Array(size) => write!(f, "{}", size),
-        }
-    }
-}
-
-pub struct FieldSizeMax(FieldSize);
-
-impl std::fmt::Display for FieldSizeMax {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.0 {
-            FieldSize::Unsigned8 => f.write_str("u8::MAX"),
-            FieldSize::Unsigned16 => f.write_str("u16::MAX"),
-            FieldSize::Unsigned32 => f.write_str("u32::MAX"),
-            FieldSize::Unsigned64 => f.write_str("u64::MAX"),
-            FieldSize::Unsigned128 => f.write_str("u128::MAX"),
-            FieldSize::Array(size) => write!(f, "[u8::MAX; {}]", size),
         }
     }
 }
@@ -90,6 +90,11 @@ impl TryFrom<&Field> for FieldType {
                 };
                 let string = ident.to_string();
                 let size = match string.as_str() {
+                    "i8" => FieldSize::Signed8,
+                    "i16" => FieldSize::Signed16,
+                    "i32" => FieldSize::Signed32,
+                    "i64" => FieldSize::Signed64,
+                    "i128" => FieldSize::Signed128,
                     "u8" => FieldSize::Unsigned8,
                     "u16" => FieldSize::Unsigned16,
                     "u32" => FieldSize::Unsigned32,
@@ -156,17 +161,49 @@ impl FieldType {
         }
     }
 
-    /// Return a value with a `Display` implementation that outputs the maximum value for this
-    /// `FieldType`.
-    #[inline]
-    pub fn max(&self) -> FieldSizeMax {
-        FieldSizeMax(self.size)
+    /// Return minimum value for a specified integer type.
+    pub fn minimum_lit(&self) -> TokenStream {
+        match self.size {
+            FieldSize::Signed8 => quote! { i8::MIN },
+            FieldSize::Signed16 => quote! { i16::MIN },
+            FieldSize::Signed32 => quote! { i32::MIN },
+            FieldSize::Signed64 => quote! { i64::MIN },
+            FieldSize::Signed128 => quote! { i128::MIN },
+            FieldSize::Unsigned8 => quote! { u8::MIN },
+            FieldSize::Unsigned16 => quote! { u16::MIN },
+            FieldSize::Unsigned32 => quote! { u32::MIN },
+            FieldSize::Unsigned64 => quote! { u64::MIN },
+            FieldSize::Unsigned128 => quote! { u128::MIN },
+            FieldSize::Array(size) => quote! { [u8::MIN; #size] },
+        }
+    }
+
+    /// Return maximum value for a specified integer type.
+    pub fn maximum_lit(&self) -> TokenStream {
+        match self.size {
+            FieldSize::Signed8 => quote! { i8::MAX },
+            FieldSize::Signed16 => quote! { i16::MAX },
+            FieldSize::Signed32 => quote! { i32::MAX },
+            FieldSize::Signed64 => quote! { i64::MAX },
+            FieldSize::Signed128 => quote! { i128::MAX },
+            FieldSize::Unsigned8 => quote! { u8::MAX },
+            FieldSize::Unsigned16 => quote! { u16::MAX },
+            FieldSize::Unsigned32 => quote! { u32::MAX },
+            FieldSize::Unsigned64 => quote! { u64::MAX },
+            FieldSize::Unsigned128 => quote! { u128::MAX },
+            FieldSize::Array(size) => quote! { [u8::MAX; #size] },
+        }
     }
 
     /// Return the size of the field type in bytes.
     #[inline]
     pub fn size (&self) -> usize {
         match self.size {
+            FieldSize::Signed8 => 1,
+            FieldSize::Signed16 => 2,
+            FieldSize::Signed32 => 4,
+            FieldSize::Signed64 => 8,
+            FieldSize::Signed128 => 16,
             FieldSize::Unsigned8 => 1,
             FieldSize::Unsigned16 => 2,
             FieldSize::Unsigned32 => 4,

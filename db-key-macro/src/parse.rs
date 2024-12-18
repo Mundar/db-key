@@ -129,6 +129,8 @@ pub struct DBKeyAttributes {
     raw_fmt: RawDebugFormat,
     alt_name: Option<Ident>,
     derive_copy: Option<bool>,
+    pub(crate) min_key: bool,
+    pub(crate) max_key: bool,
 }
 
 impl TryFrom<TokenStream> for DBKeyAttributes {
@@ -140,6 +142,8 @@ impl TryFrom<TokenStream> for DBKeyAttributes {
         let mut alt_name: Option<Ident> = None;
         let mut derive_copy = None;
         let mut new = true;
+        let mut min_key = true;
+        let mut max_key = true;
         let mut debug = true;
         let mut raw_fmt = RawDebugFormat::default();
         let mut waiting_for = ParseAttrExpect::Param;
@@ -170,6 +174,14 @@ impl TryFrom<TokenStream> for DBKeyAttributes {
                                 }
                                 "no_copy" => {
                                     derive_copy = Some(false);
+                                    waiting_for = ParseAttrExpect::Comma;
+                                }
+                                "no_max" => {
+                                    max_key = false;
+                                    waiting_for = ParseAttrExpect::Comma;
+                                }
+                                "no_min" => {
+                                    min_key = false;
                                     waiting_for = ParseAttrExpect::Comma;
                                 }
                                 "no_new" => {
@@ -276,6 +288,8 @@ impl TryFrom<TokenStream> for DBKeyAttributes {
             raw_fmt,
             alt_name,
             derive_copy,
+            min_key,
+            max_key,
         })
     }
 }
@@ -448,6 +462,8 @@ impl DBKeyStruct {
         let debug = self.fields.debug();
         let arg_defaults = self.fields.arg_defaults();
         let defaults = self.fields.defaults();
+        let minimums = self.fields.minimums();
+        let maximums = self.fields.maximums();
         let new_init_doc = self.new_init_doc();
         let new_init_partial = self.new_init_partial();
         let verify_new_parts = self.verify_new_parts();
@@ -564,6 +580,29 @@ impl DBKeyStruct {
                 }
             });
         }
+        let mut optional_consts = Vec::new();
+        if self.attr.min_key {
+            optional_consts.push(quote!{
+                /// The minimum value of the key.
+                pub const MIN_KEY: #ident = {
+                    let mut buf = [0_u8; #ident::KEY_LENGTH];
+                    let mut buf_i = 0;
+                    #(#minimums)*
+                    #ident(buf)
+                };
+            });
+        }
+        if self.attr.max_key {
+            optional_consts.push(quote!{
+                /// The maximum value of the key.
+                pub const MAX_KEY: #ident = {
+                    let mut buf = [0_u8; #ident::KEY_LENGTH];
+                    let mut buf_i = 0;
+                    #(#maximums)*
+                    #ident(buf)
+                };
+            });
+        }
         let args_definition = if self.define_args {
             quote! {
                 #[doc = #args_doc_header]
@@ -622,13 +661,7 @@ impl DBKeyStruct {
 
             impl Default for #ident {
                 fn default() -> Self {
-                    const DEFAULT: [u8; #ident::KEY_LENGTH] = {
-                        let mut def_buf = [0_u8; #ident::KEY_LENGTH];
-                        let mut def_i = 0;
-                        #(#defaults)*
-                        def_buf
-                    };
-                    Self(DEFAULT)
+                    Self::DEFAULT_KEY
                 }
             }
 
@@ -641,8 +674,14 @@ impl DBKeyStruct {
                 /// underscores.
                 const FIELD_SIZES: &'static [usize] = &[#(#sizes, )*];
                 #(#consts)*
-                /// The maximum value of the key.
-                pub const MAX_KEY: #ident = #ident([0xFF_u8; #ident::KEY_LENGTH]);
+                /// The default value of the key.
+                pub const DEFAULT_KEY: #ident = {
+                    let mut buf = [0_u8; #ident::KEY_LENGTH];
+                    let mut buf_i = 0;
+                    #(#defaults)*
+                    #ident(buf)
+                };
+                #(#optional_consts)*
 
                 #(#optional_functions)*
 

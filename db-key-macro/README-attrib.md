@@ -1,7 +1,7 @@
 # The `#[db_key]` attribute macro.
 
-The `db_key` attribute macro genereates a key structure and a key arguments structure
-from a prototype structure.
+The `db_key` attribute macro generates a key structure and a key arguments
+structure from a prototype structure.
 
 ```rust
 use db_key_macro::db_key;
@@ -16,8 +16,8 @@ struct ExampleKey {
 };
 ```
 
-The above code will generate ExampleKey and ExampleKeyArgs structures. New ExampleKey structures can be
-created from `new()` and `from(ExampleKeyArgs)`.
+The above code will generate `ExampleKey` and `ExampleKeyArgs` structures. New
+ExampleKey structures can be created from `new()` and `from(ExampleKeyArgs)`.
 
 ```rust
 # use db_key_macro::db_key;
@@ -33,8 +33,8 @@ let from_key = ExampleKey::from(ExampleKeyArgs {
 assert_eq!(new_key, from_key);
 ```
 
-The `db_key` macro automatically generates accessors for all of the fields defined in the
-prototype structure.
+The `db_key` macro automatically generates accessors for all of the fields
+defined in the prototype structure.
 
 ```rust
 # use db_key_macro::db_key;
@@ -47,8 +47,8 @@ assert_eq!(new_key.long(), 0x789ABCDE);
 assert_eq!(new_key.quad(), 0xFEDCBA9876543210);
 ```
 
-The `db_key` macro also automatically generates modifiers for all of the fields defined in
-the prototype structure.
+The `db_key` macro also automatically generates modifiers for all of the fields
+defined in the prototype structure.
 
 ```rust
 # use db_key_macro::db_key;
@@ -65,8 +65,9 @@ assert_eq!(new_key.long(), 0xEDCBA987);
 assert_eq!(new_key.quad(), 0x123456789ABCDEF0);
 ```
 
-The `db_key` includes derives for `Copy`, `Clone`, `PartialEq`, `PartialOrd`, `Eq`, &
-`Ord`. It also generates implementations for `Default` and `Debug` traits.
+The `db_key` includes derives for `Copy`, `Clone`, `PartialEq`, `PartialOrd`,
+`Eq`, & `Ord`. It also generates implementations for `Default`, `Debug`, and
+`Hash` traits.
 
 ```rust
 # use db_key_macro::db_key;
@@ -110,7 +111,8 @@ assert_eq!(&format!("{:X?}", new_key),
         ", raw: 0x21_6543_EDCBA987_123456789ABCDEF0 }"));
 ```
 
-The `db_key` macro generates `PartialEq`, `PartialOrd`, and `AsRef` traits for \[u8\].
+The `db_key` macro generates `PartialEq`, `PartialOrd`, and `AsRef` traits for
+\[u8\].
 
 ```rust
 # use db_key_macro::db_key;
@@ -126,7 +128,7 @@ assert!(*new_slice > from_key);
 assert!(new_key > *from_slice);
 ```
 
-The `db_key` generates [From] implementations for the key from `&[u8]` & 
+The `db_key` generates [From] implementations for the key from `&[u8]` &
 `[u8; KEY_LENGTH]`. It also generates [From] implementations for the key into
 `[u8; KEY_LENGTH]`, and `Vec<u8>`.
 
@@ -148,10 +150,10 @@ assert_eq!(new_key, from_array_key);
 
 ## Change crate name in documentation (`crate_name`)
 
-The `db_key` macro generates testable code examples as documentation for much of the
-generated code. It adds a 'use' line and uses the crate name of the crate in which it is used
-by default. The 'crate_name' option allows you to change the crate name used for the
-documentation tests.
+The `db_key` macro generates testable code examples as documentation for much
+of the generated code. It adds a 'use' line and uses the crate name of the
+crate in which it is used by default. The 'crate_name' option allows you to
+change the crate name used for the documentation tests.
 
 ### Examples
 
@@ -165,7 +167,8 @@ struct TestKey {
 }
 ```
 
-The above code would generate the following `use` line in the documentation tests:
+The above code would generate the following `use` line in the documentation
+tests:
 
 ```text
 use other_crate_name::{TestKey, TestKeyArgs};
@@ -173,10 +176,11 @@ use other_crate_name::{TestKey, TestKeyArgs};
 
 ## Change path in documentation (`path`)
 
-There is currently no way (in stable) to get the source file information. If the `db_key`
-macro is used in any other file than `src/lib.rs`, than you will need to either make the two
-keys available from within `src/lib.rs` via `pub use path::to::{Key, KeyArgs};` or you can
-manually specify the use path to the source file with the keys with the `path` option.
+There is currently no way (in stable) to get the source file information. If
+the `db_key` macro is used in any other file than `src/lib.rs`, than you will
+need to either make the two keys available from within `src/lib.rs` via `pub
+use path::to::{Key, KeyArgs};` or you can manually specify the use path to the
+source file with the keys with the `path` option.
 
 ### Examples
 
@@ -190,7 +194,8 @@ struct TestKey {
 }
 ```
 
-The above code would generate the following `use` line in the documentation tests:
+The above code would generate the following `use` line in the documentation
+tests:
 
 ```text
 use crate_name::source_file_dir::source_file_name::{TestKey, TestKeyArgs};
@@ -225,9 +230,10 @@ assert_eq!(from_new, from_args);
 
 ## Don't auto-generate new() (`no_new`)
 
-Normally, the `db_key` macro generates a `new()` implementation that includes all of the
-fields from the specification in order. If you don't want this autogenerated `new()` because
-you want to manually create one or just don't want one, then use the `no_new` option.
+Normally, the `db_key` macro generates a `new()` implementation that includes
+all of the fields from the specification in order. If you don't want this
+autogenerated `new()` because you want to manually create one or just don't
+want one, then use the `no_new` option.
 
 ### Examples
 
@@ -260,6 +266,82 @@ let key = NoNewKey::new(0x07E8_05_0A);
 assert_eq!(key.year(), 2024);
 assert_eq!(key.month(), 5);
 assert_eq!(key.day(), 10);
+```
+
+## Don't define MIN_KEY constant (`no_min`)
+
+Normally, the `db_key` macro generates a `MIN_KEY` constant. By default, is
+uses the MIN value for all of the fields. You can change the `MIN_KEY` values
+using the `min` option on the individual field definition. If you don't want
+this autogenerated `MIN_KEY` because you want to manually create one or just
+don't want one, then use the `no_min` option.
+
+### Examples
+
+```rust
+use db_key_macro::db_key;
+use std::ops::Range;
+
+#[db_key(no_min)]
+struct NoMinKey {
+    year: u16,
+    #[max = 12]
+    month: u8,
+    #[max = 31]
+    day: u8,
+}
+
+impl NoMinKey {
+    pub const MIN_KEY: NoMinKey = NoMinKey([0, 0, 1, 1]);
+    // MAX_KEY is autogenerated.
+}
+
+let min_key = NoMinKey::MIN_KEY;
+assert_eq!(min_key.year(), 0);
+assert_eq!(min_key.month(), 1);
+assert_eq!(min_key.day(), 1);
+let max_key = NoMinKey::MAX_KEY;
+assert_eq!(max_key.year(), 65535);
+assert_eq!(max_key.month(), 12);
+assert_eq!(max_key.day(), 31);
+```
+
+## Don't define MAX_KEY constant (`no_max`)
+
+Normally, the `db_key` macro generates a `MAX_KEY` constant. By default, is
+uses the MAX value for all of the fields. You can change the `MAX_KEY` values
+using the `max` option on the individual field definition. If you don't want
+this autogenerated `MAX_KEY` because you want to manually create one or just
+don't want one, then use the `no_max` option.
+
+### Examples
+
+```rust
+use db_key_macro::db_key;
+use std::ops::Range;
+
+#[db_key(no_max)]
+struct NoMaxKey {
+    year: u16,
+    #[min = 1]
+    month: u8,
+    #[min = 1]
+    day: u8,
+}
+
+impl NoMaxKey {
+    // MIN_KEY is autogenerated.
+    pub const MAX_KEY: NoMaxKey = NoMaxKey([0xFF, 0xFF, 12, 31]);
+}
+
+let min_key = NoMaxKey::MIN_KEY;
+assert_eq!(min_key.year(), 0);
+assert_eq!(min_key.month(), 1);
+assert_eq!(min_key.day(), 1);
+let max_key = NoMaxKey::MAX_KEY;
+assert_eq!(max_key.year(), 65535);
+assert_eq!(max_key.month(), 12);
+assert_eq!(max_key.day(), 31);
 ```
 
 ## Force the structs to implement/not implement `Copy` (`copy`, `no_copy`)
@@ -333,12 +415,13 @@ assert_eq!(key, key_copy);
 
 ## Manually write Debug implementation (`custom_debug`)
 
-Normally, the `db_key` macro generates a `Debug` implementation that includes all of the
-fields from the specification in the output. If you want to write a custom Debug
-implementation, then use the `custom_debug` option. There must be a Debug implementation.
+Normally, the `db_key` macro generates a `Debug` implementation that includes
+all of the fields from the specification in the output. If you want to write a
+custom Debug implementation, then use the `custom_debug` option. There must be
+a Debug implementation.
 
-There is a private function `raw_debug()` in the key to return the raw key formatted
-like the default Debug implementation in case you wish to use it.
+There is a private function `raw_debug()` in the key to return the raw key
+formatted like the default Debug implementation in case you wish to use it.
 
 ### Examples
 
@@ -527,8 +610,9 @@ assert_eq!(&format!("{:?}", Key::default()),
 
 ### Pretty hexadecimal output (`pretty_lower_hex`)
 
-The hex output displays the raw key value as an array of bytes, but it make clear that the output
-is displayed in lowercase hexadecimal by prepending a '0x' to each byte.
+The hex output displays the raw key value as an array of bytes, but it make
+clear that the output is displayed in lowercase hexadecimal by prepending a
+'0x' to each byte.
 
 ```rust
 # use db_key_macro::db_key;
@@ -557,13 +641,15 @@ struct Key {
 
 assert_eq!(&format!("{:?}", Key::default()),
     concat!("Key { first: 4660, second: 86, third: 2023406814, fourth: 17298946664678735070, ",
-        "raw: [0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde] }"));
+        "raw: [0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x12, 0x34, 0x56, 0x78, 0x9a, ",
+        "0xbc, 0xde] }"));
 ```
 
 ### Pretty hexadecimal output (`pretty_upper_hex`)
 
-The hex output displays the raw key value as an array of bytes, but it make clear that the output
-is displayed in uppercase hexadecimal by prepending a '0x' to each byte.
+The hex output displays the raw key value as an array of bytes, but it make
+clear that the output is displayed in uppercase hexadecimal by prepending a
+'0x' to each byte.
 
 ```rust
 # use db_key_macro::db_key;
@@ -599,8 +685,8 @@ assert_eq!(&format!("{:?}", Key::default()),
 
 ## Field name (`name`)
 
-This allows you to define the name that will be used in the documentation. If it is not
-defined, then it will default to the field name.
+This allows you to define the name that will be used in the documentation. If
+it is not defined, then it will default to the field name.
 
 ### Examples
 
@@ -621,7 +707,8 @@ struct DateKey {
 
 ## Default value (`default`)
 
-The default field attruibute allows you to change the value that is used for the default.
+The default field attruibute allows you to change the value that is used for
+the default.
 
 ### Examples
 
@@ -638,6 +725,11 @@ struct DefaultKey {
     word: u16,
     byte: u8,
 }
+
+assert_eq!(DefaultKey::DEFAULT_KEY.quad(), 0x123456789ABCDEF0);
+assert_eq!(DefaultKey::DEFAULT_KEY.long(), 0xFEDCBA98);
+assert_eq!(DefaultKey::DEFAULT_KEY.word(), 0x1234);
+assert_eq!(DefaultKey::DEFAULT_KEY.byte(), 0);
 
 let def_key = DefaultKey::default();
 
@@ -656,4 +748,68 @@ assert_eq!(part_key.quad(), 0x123456789ABCDEF0);
 assert_eq!(part_key.long(), 0x12345678);
 assert_eq!(part_key.word(), 0x1234);
 assert_eq!(part_key.byte(), 0x5A);
+```
+
+## Minimum value (`min`)
+
+The `min` field attruibute allows you to change the value that is used for the
+minimum value stored in the `MIN_KEY` constant. It is not currently enforced in
+any way.
+
+### Examples
+
+```rust
+use db_key_macro::db_key;
+
+#[db_key]
+struct MinKey {
+    #[min = 0x100000000]
+    quad: u64,
+    #[min = 0x10000]
+    long: u32,
+    #[min = 0x100]
+    word: u16,
+    #[default = u8::MAX]
+    #[min = u8::MAX]
+    byte: u8,
+}
+
+let min_key = MinKey::MIN_KEY;
+
+assert_eq!(min_key.quad(), 0x100000000);
+assert_eq!(min_key.long(), 0x10000);
+assert_eq!(min_key.word(), 0x100);
+assert_eq!(min_key.byte(), 0xFF);
+```
+
+## Maximum value (`max`)
+
+The `max` field attruibute allows you to change the value that is used for the
+maximum value stored in the `MAX_KEY` constant. It is not currently enforced in
+any way.
+
+### Examples
+
+```rust
+use db_key_macro::db_key;
+
+#[db_key]
+struct MaxKey {
+    #[max = 0x7FFFFFFFFFFFFFFF]
+    quad: u64,
+    #[max = 0x7FFFFFFF]
+    long: u32,
+    #[max = 0x7FFF]
+    word: u16,
+    #[default = u8::MIN]
+    #[max = u8::MIN]
+    byte: u8,
+}
+
+let max_key = MaxKey::MAX_KEY;
+
+assert_eq!(max_key.quad(), 0x7FFFFFFFFFFFFFFF);
+assert_eq!(max_key.long(), 0x7FFFFFFF);
+assert_eq!(max_key.word(), 0x7FFF);
+assert_eq!(max_key.byte(), 0x0);
 ```

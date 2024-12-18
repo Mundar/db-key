@@ -27,7 +27,7 @@ pub fn db_key(attr: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 #[doc = include_str!("../README-derive.md")]
-#[proc_macro_derive(DBKey, attributes(key, default, name))]
+#[proc_macro_derive(DBKey, attributes(key, default, min, max, name))]
 pub fn db_key_derive(input: TokenStream) -> TokenStream {
     // This needs to be done here because any errors are output as a TokenStream.
     let input = parse_macro_input!(input as DeriveInput);

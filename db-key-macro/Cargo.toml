@@ -1,6 +1,6 @@
 [package]
 name = "db-key-macro"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Attribute macro to generate fixed-length key-value database keys"
 authors = ["Thomas Mundar <thomas@mundar.com>"]

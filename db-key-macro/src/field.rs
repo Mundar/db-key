@@ -1,5 +1,6 @@
 use proc_macro2::{
     Ident,
+    LexError,
     TokenStream,
 };
 use quote::{quote, quote_spanned};
@@ -13,7 +14,6 @@ use syn::{
     Fields,
     Field,
     Lit,
-    LitInt,
     Meta,
     Result,
     spanned::Spanned,
@@ -114,6 +114,8 @@ impl DBKeyFields {
         (from_args, "code to initialize from(KeyArgs)"),
         (debug, "code to impelment Debug"),
         (defaults, "code to implement Default for the key structure"),
+        (minimums, "code to implement MIN_KEY for the key structure"),
+        (maximums, "code to implement MAX_KEY for the key structure"),
         (arg_defaults, "code to implement the Default for the arguments structure"),
     }
     impl_fields_self! {
@@ -181,6 +183,8 @@ struct FieldAttributes {
     docs: Vec<Attribute>,
     name: String,
     default: TokenStream,
+    minimum: TokenStream,
+    maximum: TokenStream,
 }
 
 impl FieldAttributes {
@@ -190,6 +194,8 @@ impl FieldAttributes {
         let mut docs = Vec::new();
         let mut name = field.ident.clone().unwrap().to_string();
         let mut default = field_type.default_lit();
+        let mut minimum = field_type.minimum_lit();
+        let mut maximum = field_type.maximum_lit();
         for attr in field.attrs.iter() {
             if let Some(ident) = attr.path().get_ident() {
                 let s = ident.to_string();
@@ -227,11 +233,33 @@ impl FieldAttributes {
                     "default" => {
                         match &attr.meta {
                             Meta::NameValue(name_value) => {
-                                default = Self::parse_default_value(&name_value.value);
+                                default = Self::parse_default_value(&name_value.value)?;
                             }
                             _ => {
                                 return Err(Error::new(ident.span(),
                                     "The default attribute expects a value."));
+                            }
+                        }
+                    }
+                    "min" => {
+                        match &attr.meta {
+                            Meta::NameValue(name_value) => {
+                                minimum = Self::parse_default_value(&name_value.value)?;
+                            }
+                            _ => {
+                                return Err(Error::new(ident.span(),
+                                    "The min attribute expects a value."));
+                            }
+                        }
+                    }
+                    "max" => {
+                        match &attr.meta {
+                            Meta::NameValue(name_value) => {
+                                maximum = Self::parse_default_value(&name_value.value)?;
+                            }
+                            _ => {
+                                return Err(Error::new(ident.span(),
+                                    "The max attribute expects a value."));
                             }
                         }
                     }
@@ -245,57 +273,108 @@ impl FieldAttributes {
             docs,
             name,
             default,
+            minimum,
+            maximum,
         })
     }
 
-    fn parse_default_value(value: &Expr) -> TokenStream {
+    fn parse_default_value(value: &Expr) -> Result<TokenStream> {
         match value {
             Expr::Lit(lit) => {
                 match &lit.lit {
                     Lit::Str(s) => {
                         let string = s.value();
                         let trimmed = string.trim_matches('"');
-                        match trimmed.strip_prefix('[') {
-                            Some(open_bracket) => if let Some(array_inner) =
-                                open_bracket.strip_suffix(']')
-                            {
-                                match array_inner.split_once(';') {
-                                    None => {
-                                        let values: Vec<LitInt> = array_inner.split(",")
-                                            .map(|v| LitInt::new(v.trim(), value.span()))
-                                            .collect();
-                                        return quote! { [#(#values, )*] };
-                                    }
-                                    Some((value, count)) => {
-                                        let value = LitInt::new(value.trim(), value.span());
-                                        let count = LitInt::new(count.trim(), value.span());
-                                        return quote! { [#value;#count] };
-                                    }
-                                }
+                        let stream: std::result::Result<TokenStream, LexError> = trimmed.parse();
+                        match stream {
+                            Ok(stream) => {
+                                Ok(quote_spanned! {
+                                    value.span()=>
+                                    #stream
+                                })
                             }
-                            None => {
-                                let integer = LitInt::new(trimmed, value.span());
-                                return quote! { #integer };
+                            Err(err) => {
+                                Err(Error::new(value.span(),
+                                    format!("Failed to parse parameter: {}", err)))
                             }
-                        }
-                        // Fallback if parsing fails.
-                        quote_spanned! {
-                            value.span()=>
-                                #value
                         }
                     }
-                    _ => quote_spanned! {
+                    _ => Ok(quote_spanned! {
                         value.span()=>
                             #value
-                    },
+                    }),
                 }
             }
-            _ => quote_spanned! {
+            _ => Ok(quote_spanned! {
                 value.span()=>
                     #value
-            },
+            }),
         }
     }
+}
+
+macro_rules! impl_const_define {
+    ($fn_ident:ident, $attr_ident:ident, $const_name:literal) => {
+        #[doc = concat!("Define the code to initialize ", $const_name, " for this field.")]
+        pub fn $fn_ident(&self) -> TokenStream {
+            let field_type = &self.field_type;
+            let xor_mask = &self.field_type.minimum_lit();
+            let value = &self.attr.$attr_ident;
+            match self.field_type.size {
+                FieldSize::Signed8 | FieldSize::Signed16 | FieldSize::Signed32 |
+                    FieldSize::Signed64 | FieldSize::Signed128 =>
+                {
+                    let size = field_type.size();
+                    quote! {
+                        let value: #field_type = #value ^ #xor_mask;
+                        if 0 == value {
+                            buf_i += #size;
+                        }
+                        else {
+                            let bytes = value.to_be_bytes();
+                            let mut i = 0;
+                            while i < bytes.len() {
+                                buf[buf_i] = bytes[i];
+                                buf_i += 1;
+                                i += 1;
+                            }
+                        }
+                    }
+                }
+                FieldSize::Unsigned8 | FieldSize::Unsigned16 | FieldSize::Unsigned32 |
+                    FieldSize::Unsigned64 | FieldSize::Unsigned128 =>
+                {
+                    let size = field_type.size();
+                    quote! {
+                        let value: #field_type = #value;
+                        if 0 == value {
+                            buf_i += #size;
+                        }
+                        else {
+                            let bytes = value.to_be_bytes();
+                            let mut i = 0;
+                            while i < bytes.len() {
+                                buf[buf_i] = bytes[i];
+                                buf_i += 1;
+                                i += 1;
+                            }
+                        }
+                    }
+                }
+                FieldSize::Array(_) => {
+                    quote! {
+                        let value: #field_type = #value;
+                        let mut i = 0;
+                        while i < value.len() {
+                            buf[buf_i] = value[i];
+                            buf_i += 1;
+                            i += 1;
+                        }
+                    }
+                }
+            }
+        }
+    };
 }
 
 #[derive(Debug)]
@@ -307,6 +386,9 @@ pub struct DBKeyField {
     start_ident: Ident,
     end_ident: Ident,
     range_ident: Ident,
+    default_ident: Ident,
+    min_ident: Ident,
+    max_ident: Ident,
     field_type: FieldType,
     random: FieldValue,
     start_index: usize,
@@ -321,6 +403,9 @@ impl DBKeyField {
         let start_ident = Ident::new(&format!("{}_START", upper_str), ident.span());
         let end_ident = Ident::new(&format!("{}_END", upper_str), ident.span());
         let range_ident = Ident::new(&format!("{}_RANGE", upper_str), ident.span());
+        let default_ident = Ident::new(&format!("{}_DEFAULT", upper_str), ident.span());
+        let min_ident = Ident::new(&format!("{}_MIN", upper_str), ident.span());
+        let max_ident = Ident::new(&format!("{}_MAX", upper_str), ident.span());
         let field_type = FieldType::try_from(field)?;
         let attr = FieldAttributes::try_new(field, &field_type)?;
         let random = FieldValue::random(field_type.size);
@@ -334,6 +419,9 @@ impl DBKeyField {
             start_ident,
             end_ident,
             range_ident,
+            default_ident,
+            min_ident,
+            max_ident,
             field_type,
             random,
             start_index,
@@ -347,17 +435,30 @@ impl DBKeyField {
         let start_ident = &self.start_ident;
         let end_ident = &self.end_ident;
         let range_ident = &self.range_ident;
-        let size = self.field_type.size();
-        let start = self.start_index;
+        let default_ident = &self.default_ident;
+        let min_ident = &self.min_ident;
+        let max_ident = &self.max_ident;
+        let size = &self.field_type.size();
+        let start = &self.start_index;
+        let default = &self.attr.default;
+        let field_type = &self.field_type;
+        let min = &self.attr.minimum;
+        let max = &self.attr.maximum;
         quote! {
             #[doc = concat!("The size of the ", #name, " field.")]
             pub(crate) const #size_ident: usize = #size;
-            #[doc = concat!("The starting byte of of the ", #name, " field in the key array.")]
+            #[doc = concat!("The starting byte of the ", #name, " field in the key array.")]
             pub(crate) const #start_ident: usize = #start;
             #[doc = concat!("The byte after the last byte of the ", #name, " field in the key array.")]
             pub(crate) const #end_ident: usize = Self::#start_ident + Self::#size_ident;
             #[doc = concat!("The range of the bytes for the ", #name, " field in the key array.")]
             pub(crate) const #range_ident: ::std::ops::Range<usize> = Self::#start_ident..Self::#end_ident;
+            #[doc = concat!("The default value of the ", #name, " field in the key array.")]
+            pub(crate) const #default_ident: #field_type = #default;
+            #[doc = concat!("The minimum value of the ", #name, " field in the key array.")]
+            pub(crate) const #min_ident: #field_type = #min;
+            #[doc = concat!("The maximum value of the ", #name, " field in the key array.")]
+            pub(crate) const #max_ident: #field_type = #max;
         }
     }
 
@@ -397,6 +498,12 @@ impl DBKeyField {
             FieldSize::Unsigned8 | FieldSize::Unsigned16 | FieldSize::Unsigned32 |
                 FieldSize::Unsigned64 | FieldSize::Unsigned128
                 => quote! { #ident.to_be_bytes() },
+            FieldSize::Signed8 | FieldSize::Signed16 | FieldSize::Signed32 |
+                FieldSize::Signed64 | FieldSize::Signed128
+                => {
+                    let xor_mask = self.field_type.minimum_lit();
+                    quote! { (#ident ^ #xor_mask).to_be_bytes() }
+                }
         }
     }
 
@@ -412,9 +519,23 @@ impl DBKeyField {
     /// Define the code to initialize from(KeyArgs) for this field.
     pub fn from_args(&self) -> TokenStream {
         let range_ident = &self.range_ident;
-        let as_array = &self.as_array();
-        quote!{
-            buf[Self::#range_ident].copy_from_slice(&args.#as_array);
+        match self.field_type.size {
+            FieldSize::Signed8 | FieldSize::Signed16 | FieldSize::Signed32 |
+                FieldSize::Signed64 | FieldSize::Signed128
+            => {
+                let ident = &self.ident;
+                let xor_mask = self.field_type.minimum_lit();
+                quote! {
+                    buf[Self::#range_ident]
+                        .copy_from_slice(&(args.#ident ^ #xor_mask).to_be_bytes());
+                }
+            }
+            _ => {
+                let as_array = &self.as_array();
+                quote!{
+                    buf[Self::#range_ident].copy_from_slice(&args.#as_array);
+                }
+            }
         }
     }
 
@@ -426,45 +547,9 @@ impl DBKeyField {
         }
     }
 
-    /// Define the code to initialize from(KeyArgs) for this field.
-    pub fn defaults(&self) -> TokenStream {
-        let field_type = &self.field_type;
-        let default = &self.attr.default;
-        match self.field_type.size {
-            FieldSize::Unsigned8 | FieldSize::Unsigned16 | FieldSize::Unsigned32 |
-                FieldSize::Unsigned64 | FieldSize::Unsigned128 =>
-            {
-                let size = field_type.size();
-                quote! {
-                    let value: #field_type = #default;
-                    if 0 == value {
-                        def_i += #size;
-                    }
-                    else {
-                        let bytes = value.to_be_bytes();
-                        let mut i = 0;
-                        while i < bytes.len() {
-                            def_buf[def_i] = bytes[i];
-                            def_i += 1;
-                            i += 1;
-                        }
-                    }
-                }
-            }
-            FieldSize::Array(_) => {
-                quote! {
-                    let value: #field_type = #default;
-                    let mut i = 0;
-                    while i < value.len() {
-                        def_buf[def_i] = value[i];
-                        def_i += 1;
-                        i += 1;
-                    }
-                }
-            }
-        }
-    }
-
+    impl_const_define!{defaults, default, "Default"}
+    impl_const_define!{maximums, maximum, "maximum value"}
+    impl_const_define!{minimums, minimum, "minimum value"}
     /// Define the code to initialize from(KeyArgs) for this field.
     pub fn arg_defaults(&self) -> TokenStream {
         let ident = &self.ident;
@@ -478,11 +563,34 @@ impl DBKeyField {
     fn get_code(&self) -> TokenStream {
         let ident = &self.ident;
         match self.field_type.size {
+            FieldSize::Signed8 => {
+                let start_ident = &self.start_ident;
+                quote! {
+                    pub const fn #ident(&self) -> i8 {
+                        (self.0[Self::#start_ident] as i8) ^ i8::MIN
+                    }
+                }
+            }
             FieldSize::Unsigned8 => {
                 let start_ident = &self.start_ident;
                 quote! {
                     pub const fn #ident(&self) -> u8 {
                         self.0[Self::#start_ident]
+                    }
+                }
+            }
+            FieldSize::Signed16 | FieldSize::Signed32 | FieldSize::Signed64 |
+                FieldSize::Signed128 =>
+            {
+                let size_ident = &self.size_ident;
+                let range_ident = &self.range_ident;
+                let field_type = &self.field_type;
+                let xor_mask = &self.field_type.minimum_lit();
+                quote! {
+                    pub fn #ident(&self) -> #field_type {
+                        let mut buf = [0_u8; Self::#size_ident];
+                        buf.copy_from_slice(&self.0[Self::#range_ident]);
+                        #field_type::from_be_bytes(buf) ^ #xor_mask
                     }
                 }
             }
@@ -517,20 +625,35 @@ impl DBKeyField {
         let struct_ident = &db_key.ident;
         let get_doc = format!("Get the {} value from the `{}`.", &self.attr.name, struct_ident);
         let random = FieldValue::random(self.field_type.size);
+        let min_lines = if db_key.attr.min_key {
+            [ format!("\nlet min_key = {0}::MIN_KEY;", struct_ident),
+            format!("\nassert_eq!(min_key.{0}(), {1});", &self.ident, &self.attr.minimum) ]
+        }
+        else {
+            [String::new(), String::new()]
+        };
+        let max_lines = if db_key.attr.max_key {
+            [ format!("\nlet max_key = {0}::MAX_KEY;", struct_ident),
+            format!("\nassert_eq!(max_key.{0}(), {1});", &self.ident, &self.attr.maximum) ]
+        }
+        else {
+            [String::new(), String::new()]
+        };
         let get_example = format!(r#"
-let default_key = {0}::default();
-let max_key = {0}::MAX_KEY;
+let default_key = {0}::default();{5}{6}
 {1}
 
-assert_eq!(default_key.{2}(), {3});
-assert_eq!(max_key.{2}(), {4});
-assert_eq!(key.{2}(), {5});"#,
+assert_eq!(default_key.{2}(), {3});{7}{8}
+assert_eq!(key.{2}(), {4});"#,
             struct_ident, // 0
             db_key.doc_init_key("key", &self.ident, &random),   // 1
             &self.ident, // 2
             &self.attr.default, // 3
-            &self.field_type.max(), // 4
-            random.assert_eq(), // 5
+            random.assert_eq(), // 4
+            min_lines[0], // 5
+            max_lines[0], // 6
+            min_lines[1], // 7
+            max_lines[1], // 8
         );
         let docs = &self.attr.docs;
         let get_code = self.get_code();
@@ -552,11 +675,31 @@ assert_eq!(key.{2}(), {5});"#,
     fn set_code(&self) -> TokenStream {
         let set_ident = &self.set_ident;
         match self.field_type.size {
+            FieldSize::Signed8 => {
+                let start_ident = &self.start_ident;
+                quote! {
+                    pub fn #set_ident(&mut self, value: i8) {
+                        self.0[Self::#start_ident] = (value ^ i8::MIN) as u8;
+                    }
+                }
+            }
             FieldSize::Unsigned8 => {
                 let start_ident = &self.start_ident;
                 quote! {
                     pub fn #set_ident(&mut self, value: u8) {
                         self.0[Self::#start_ident] = value;
+                    }
+                }
+            }
+            FieldSize::Signed16 | FieldSize::Signed32 | FieldSize::Signed64 |
+                FieldSize::Signed128 =>
+            {
+                let range_ident = &self.range_ident;
+                let field_type = &self.field_type;
+                let xor_mask = self.field_type.minimum_lit();
+                quote! {
+                    pub fn #set_ident(&mut self, value: #field_type) {
+                        self.0[Self::#range_ident].copy_from_slice(&(value ^ #xor_mask).to_be_bytes());
                     }
                 }
             }

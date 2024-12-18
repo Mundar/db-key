@@ -30,6 +30,38 @@ impl FieldValue {
     }
 }
 
+macro_rules! impl_to_from_signed {
+    ($(($ix:ident, $size:ident, $xor_mask:path),)+) => {
+        $(
+        impl From<$ix> for FieldValue {
+            fn from(value: $ix) -> Self {
+                Self {
+                    size: FieldSize::$size,
+                    value: (value ^ $xor_mask).to_be_bytes().to_vec(),
+                }
+            }
+        }
+
+        impl TryFrom<&FieldValue> for $ix {
+            type Error = syn::Error;
+
+            fn try_from(value: &FieldValue) -> std::result::Result<Self, Self::Error> {
+                match value.size {
+                    FieldSize::$size => {
+                        let mut buf = [0_u8; std::mem::size_of::<$ix>()];
+                        buf.copy_from_slice(&value.value);
+                        Ok($ix::from_be_bytes(buf) ^ $xor_mask)
+                    }
+                    wrong_type => Err(Self::Error::new(proc_macro2::Span::mixed_site(),
+                        format_args!(concat!("Failed to convert a FieldValue to a ",
+                            stringify!($ix), " because it is the wrong type: {:?}"), wrong_type))),
+                }
+            }
+        }
+        )+
+    }
+}
+
 macro_rules! impl_to_from_unsigned {
     ($(($ux:ident, $size:ident),)+) => {
         $(
@@ -99,6 +131,14 @@ macro_rules! impl_to_from_array {
     };
 }
 
+impl_to_from_signed! {
+    (i8, Signed8, i8::MIN),
+    (i16, Signed16, i16::MIN),
+    (i32, Signed32, i32::MIN),
+    (i64, Signed64, i64::MIN),
+    (i128, Signed128, i128::MIN),
+}
+
 impl_to_from_unsigned! {
     (u8, Unsigned8),
     (u16, Unsigned16),
@@ -112,18 +152,35 @@ impl_to_from_array! {
 }
 
 macro_rules! from_be_bytes {
+    ($value:expr, i8) => { from_be_bytes!{$value, i8, i8::MIN} };
+    ($value:expr, i16) => { from_be_bytes!{$value, i16, i16::MIN} };
+    ($value:expr, i32) => { from_be_bytes!{$value, i32, i32::MIN} };
+    ($value:expr, i64) => { from_be_bytes!{$value, i64, i64::MIN} };
+    ($value:expr, i128) => { from_be_bytes!{$value, i128, i128::MIN} };
     ($value:expr, $ty:ident) => {
         {
             let mut buf = [0_u8; std::mem::size_of::<$ty>()];
             buf.copy_from_slice(&$value);
             $ty::from_be_bytes(buf)
         }
-    }
+    };
+    ($value:expr, $ty:ident, $xor_mask:path) => {
+        {
+            let mut buf = [0_u8; std::mem::size_of::<$ty>()];
+            buf.copy_from_slice(&$value);
+            $ty::from_be_bytes(buf) ^ $xor_mask
+        }
+    };
 }
 
 impl Display for FieldValue {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.size {
+            FieldSize::Signed8 => write!(f, "{}_i8", self.value[0] as i8),
+            FieldSize::Signed16 => write!(f, "{}_i16", from_be_bytes!(self.value, i16)),
+            FieldSize::Signed32 => write!(f, "{}_i32", from_be_bytes!(self.value, i32)),
+            FieldSize::Signed64 => write!(f, "{}_i64", from_be_bytes!(self.value, i64)),
+            FieldSize::Signed128 => write!(f, "{}_i128", from_be_bytes!(self.value, i128)),
             FieldSize::Unsigned8 => write!(f, "{:#04X}_u8", self.value[0]),
             FieldSize::Unsigned16 => write!(f, "{:#06X}_u16", from_be_bytes!(self.value, u16)),
             FieldSize::Unsigned32 => write!(f, "{:#010X}_u32", from_be_bytes!(self.value, u32)),

@@ -1,11 +1,11 @@
 [package]
 name = "db-key-samples"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 publish = false
 
 [dependencies]
-db-key-macro = { version = "0.1.1", path = "../db-key-macro" }
+db-key-macro = { version = "0.2.0", path = "../db-key-macro" }
 
 [dev-dependencies]
 proptest = "1.5.0"
